@@ -13,7 +13,6 @@ navigation = "2.8.9"
 coil = "2.4.0"
 
 
-
 [libraries]
 google-accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "accompanistSystemuicontrollerVersion" }
 material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version = "1.6.7" }

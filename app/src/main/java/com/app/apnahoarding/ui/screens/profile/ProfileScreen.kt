@@ -1,29 +1,34 @@
 package com.app.apnahoarding.ui.screens.profile
 
 
+import android.provider.ContactsContract.Profile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import com.app.apnahoarding.ui.components.BottomNavFAB
+import com.app.apnahoarding.ui.components.BottomNavigationBar
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import kotlin.math.round
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(navController: NavController) {
+fun ProfileScreen(navController: NavHostController) {
 
     val systemUiController = rememberSystemUiController()
     val statusBarColor = Color(0xFF0059C5)
@@ -36,23 +41,8 @@ fun ProfileScreen(navController: NavController) {
     }
 
     Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* TODO */ },
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add")
-            }
-        },
-        floatingActionButtonPosition = FabPosition.Center,
         bottomBar = {
-            BottomAppBar(
-                containerColor = Color.White,
-                tonalElevation = 4.dp,
-                actions = {
-                    BottomNavigationBar()
-                }
-            )
+            BottomNavigationBar(navController, bottomBarState = true)
         }
     ) { innerPadding ->
         Column(
@@ -97,8 +87,13 @@ fun ProfileScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    ProfileButton("Profile")
-                    ProfileButton("My Posts")
+                    Button(text = "Profile"){
+                        navController.navigate("editProfile")
+                    }
+
+                    Button("My Posts"){
+
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -107,8 +102,12 @@ fun ProfileScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    ProfileButton("Dashboard")
-                    ProfileButton("Settings")
+                    Button("Dashboard"){
+
+                    }
+                    Button("Settings"){
+                        navController.navigate("settings")
+                    }
                 }
             }
 
@@ -122,58 +121,26 @@ fun ProfileScreen(navController: NavController) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("Made in India 🇮🇳", fontSize = 12.sp)
-                Text("# deWall Ads", fontWeight = FontWeight.Bold, color = Color.Gray)
+                Text("# Apna hoarding Ads", fontWeight = FontWeight.Bold, color = Color.Gray)
             }
+            Spacer(modifier = Modifier.height(12.dp))
+
         }
     }
+
+    BottomNavFAB(navController)
 }
 
 @Composable
-fun ProfileButton(text: String) {
+fun Button(text: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(width = 140.dp, height = 60.dp)
-            .background(Color(0xFFE9F6FF), shape = RoundedCornerShape(12.dp))
-            .clickable { /* TODO */ },
+            .background(Color(0xFFB2D8F5), shape = RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-    }
-}
-
-@Composable
-fun BottomNavigationBar() {
-    val items = listOf("Home", "Search", "Feed", "Profile")
-    val icons = listOf(
-        Icons.Default.Favorite,
-        Icons.Default.Search,
-        Icons.Default.GridView,
-        Icons.Default.Person
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        items.forEachIndexed { index, item ->
-            if (index == 2) {
-                Spacer(modifier = Modifier.width(48.dp)) // Space for FAB
-            }
-
-            NavigationBarItem(
-                selected = item == "Profile", // You can use a state to manage selection
-                onClick = { /* TODO */ },
-                icon = {
-                    Icon(imageVector = icons[index], contentDescription = item)
-                },
-                label = {
-                    Text(text = item, fontSize = 11.sp)
-                },
-                alwaysShowLabel = true
-            )
-        }
     }
 }

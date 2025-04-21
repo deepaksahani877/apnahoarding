@@ -40,7 +40,7 @@ fun EditProfileScreen(navController: NavController) {
             TopAppBar(
                 title = { Text("Edit Profile", color = Color.White) },
                 navigationIcon = {
-                    IconButton(onClick = { /* Handle back */ }) {
+                    IconButton(onClick = {navController.popBackStack() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -103,11 +103,11 @@ fun EditProfileScreen(navController: NavController) {
                     Text("IN +91", fontWeight = FontWeight.Bold)
                 }
 
-                Divider(
-                    color = Color.Gray,
-                    modifier = Modifier
-                        .width(1.dp)
-                        .fillMaxHeight(0.6f)
+
+                VerticalDivider(
+                    modifier = Modifier.fillMaxHeight(0.6f),
+                    thickness = 1.dp,
+                    color = Color.Gray
                 )
 
                 OutlinedTextField(
