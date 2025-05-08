@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "956564099806",
+    "project_id": "apnahoarding-36924",
+    "storage_bucket": "apnahoarding-36924.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:956564099806:android:f420de74cd9f242e63684f",
+        "android_client_info": {
+          "package_name": "com.app.apnahoarding"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "956564099806-6jc8tra62umbs1l5a329ajdae5ab7kfv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.app.apnahoarding",
+            "certificate_hash": "6b61da3b86c6f63ca5ec492964f8a3748c0c0a3c"
+          }
+        },
+        {
+          "client_id": "956564099806-h4jtil9vvtgk1l7pdsl8657s2ark6l50.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB88BtBaHITWBASzI58191yTrGw_L5LaQk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "956564099806-h4jtil9vvtgk1l7pdsl8657s2ark6l50.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

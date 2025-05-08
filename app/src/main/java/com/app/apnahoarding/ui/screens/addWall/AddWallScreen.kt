@@ -1,62 +1,102 @@
 package com.app.apnahoarding.ui.screens.addWall
 
-
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Environment
 import android.widget.Toast
-import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.app.apnahoarding.ui.theme.TopAppBarColor
-import androidx.compose.material.icons.filled.SquareFoot
-import androidx.compose.material.icons.filled.AspectRatio
-import androidx.compose.material.icons.filled.Crop
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
-import androidx.navigation.NavController
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
-import java.io.File
-
+import com.app.apnahoarding.core.models.WallData
+import com.app.apnahoarding.ui.shared.viewmodel.SharedAddWallViewModel
+import com.app.apnahoarding.ui.theme.TopAppBarColor
+import com.app.apnahoarding.utils.launchCamera
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddWallScreen(navController: NavHostController) {
-    val length = remember { mutableStateOf("") }
-    val width = remember { mutableStateOf("") }
-    val price = remember { mutableStateOf("") }
+fun AddWallScreen(
+    navController: NavHostController,
+    sharedAddWallViewModel: SharedAddWallViewModel,
+    viewModel: AddWallViewModel = hiltViewModel(),
+) {
+    val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+
+    val onSubmit = {
+        val isValid = viewModel.validateForm()
+
+        sharedAddWallViewModel.updateWallData(
+            WallData(
+                length = state.length,
+                width = state.width,
+                price = state.price,
+                imageUris = state.imageUris.map { it.toString() })
+        )
+
+        if (isValid) {
+            // Proceed with form submission (e.g., save data)
+            navController.navigate("imageUpload")
+
+        } else {
+            Toast.makeText(context,"Please fill all the details", Toast.LENGTH_SHORT).show()
+            // Handle invalid case (show errors, trigger animations)
+        }
+    }
+
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Wall", color = Color.White) },
-                navigationIcon = {
+                title = { Text("Add Wall", color = Color.White) }, navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
@@ -64,117 +104,39 @@ fun AddWallScreen(navController: NavHostController) {
                             tint = Color.White
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = TopAppBarColor)
+                }, colors = TopAppBarDefaults.topAppBarColors(containerColor = TopAppBarColor)
             )
-        }
-    ) { paddingValues ->
+        }) { padding ->
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFFE7F6FC))
-                .padding(horizontal = 12.dp, vertical = 12.dp)
+                .padding(padding)
+                .padding(16.dp)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                "Wall Size :",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = Color(0xFF003366)
+            WallSizeInput(
+                length = state.length,
+                width = state.width,
+                onLengthChange = viewModel::onLengthChange,
+                onWidthChange = viewModel::onWidthChange
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                OutlinedTextField(
-                    value = length.value,
-                    onValueChange = { length.value = it },
-                    placeholder = { Text("Length (feet)") },
-                    leadingIcon = { Icon(Icons.Default.SquareFoot, contentDescription = null) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                OutlinedTextField(
-                    value = width.value,
-                    onValueChange = { width.value = it },
-                    placeholder = { Text("Width (feet)") },
-                    leadingIcon = { Icon(Icons.Default.SquareFoot, contentDescription = null) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                "Rent per/month :",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = Color(0xFF003366)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = price.value,
-                onValueChange = { price.value = it },
-                placeholder = { Text("Enter price") },
-                leadingIcon = { Text("₹", fontSize = 20.sp) },
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            PriceInput(
+                price = state.price, onPriceChange = viewModel::onPriceChange
             )
 
-            Slider(
-                value = price.value.toFloatOrNull() ?: 0f,
-                onValueChange = { price.value = it.toInt().toString() },
-                valueRange = 0f..1000f,
-                modifier = Modifier.fillMaxWidth(),
-                colors = SliderDefaults.colors(
-                    thumbColor = Color(0xFF0066CC),
-                    activeTrackColor = Color(0xFF0066CC)
-                ),
-                thumb = {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp) // Customize size here
-                            .background(Color(0xFF0066CC), shape = CircleShape)
-                    )
+            ImagePickerRow(
+                imageUris = state.imageUris, onImageSelected = { index, uri ->
+                    sharedAddWallViewModel.updateImageUri(index, uri)
+                    viewModel.updateImageUri(index, uri)
                 }
             )
-
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                "Please add exactly 3 images :",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = Color(0xFF003366)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                SetupImagePicker()
-            }
 
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
-                onClick = { /* Handle continue */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(55.dp),
+                onClick = onSubmit,
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0066CC))
             ) {
@@ -186,55 +148,73 @@ fun AddWallScreen(navController: NavHostController) {
 
 
 @Composable
-fun ImageSelector(index: Int, imageUri: Uri?, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(100.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF597DBF))
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        if (imageUri != null) {
-            AsyncImage(model = imageUri, contentDescription = null)
-        } else {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Default.AddAPhoto,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
-                )
-                Text("Photo ${index + 1}", color = Color.White, fontSize = 12.sp)
-            }
-        }
+fun WallSizeInput(
+    length: String, width: String, onLengthChange: (String) -> Unit, onWidthChange: (String) -> Unit
+) {
+    Text("Wall Size:", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF003366))
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(
+            value = length,
+            onValueChange = onLengthChange,
+            placeholder = { Text("Length (feet)") },
+            modifier = Modifier.weight(1f),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
+        OutlinedTextField(
+            value = width,
+            onValueChange = onWidthChange,
+            placeholder = { Text("Width (feet)") },
+            modifier = Modifier.weight(1f),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
     }
 }
 
+
 @Composable
-fun SetupImagePicker() {
+fun PriceInput(price: String, onPriceChange: (String) -> Unit) {
+    Text(
+        "Rent per/month:", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF003366)
+    )
+    OutlinedTextField(
+        value = price,
+        onValueChange = onPriceChange,
+        placeholder = { Text("Enter price") },
+        leadingIcon = { Text("₹", fontSize = 20.sp) },
+        modifier = Modifier.fillMaxWidth(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+    )
+    Slider(
+        value = price.toFloatOrNull() ?: 0f,
+        onValueChange = { onPriceChange(it.toInt().toString()) },
+        valueRange = 0f..1000f,
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+
+@Composable
+fun ImagePickerRow(
+    imageUris: List<Uri?>, onImageSelected: (index: Int, uri: Uri?) -> Unit
+) {
     val context = LocalContext.current
-    val imageUris = remember { mutableStateListOf<Uri?>(null, null, null) }
     val showDialog = remember { mutableStateOf(false) }
     val selectedIndex = remember { mutableIntStateOf(0) }
-
     val cameraImageUri = remember { mutableStateOf<Uri?>(null) }
 
-    // Launcher to capture image from camera
+
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) {
-        if (it) {
-            imageUris[selectedIndex.intValue] = cameraImageUri.value
-        }
+        if (it) onImageSelected(selectedIndex.intValue, cameraImageUri.value)
+
     }
 
-    // Launcher to pick image from gallery
-    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
-            imageUris[selectedIndex.intValue] = it
-        }
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
+        it?.let { uri -> onImageSelected(selectedIndex.intValue, uri) }
     }
 
-    // Launcher to request CAMERA permission
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -245,11 +225,7 @@ fun SetupImagePicker() {
         }
     }
 
-    // Image picker row
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
         repeat(3) { index ->
             ImageSelector(index, imageUris[index]) {
                 selectedIndex.intValue = index
@@ -258,7 +234,6 @@ fun SetupImagePicker() {
         }
     }
 
-    // Dialog for choosing camera or gallery
     if (showDialog.value) {
         AlertDialog(
             onDismissRequest = { showDialog.value = false },
@@ -288,27 +263,34 @@ fun SetupImagePicker() {
                 }
             },
             confirmButton = {},
-            dismissButton = {}
-        )
+            dismissButton = {})
     }
 }
 
 
-fun launchCamera(
-    context: Context,
-    cameraImageUri: MutableState<Uri?>,
-    cameraLauncher: ManagedActivityResultLauncher<Uri, Boolean>
-) {
-    val uri = FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.provider",
-        File(
-            context.getExternalFilesDir(Environment.DIRECTORY_PICTURES),
-            "image_${System.currentTimeMillis()}.jpg"
-        )
-    )
-    cameraImageUri.value = uri
-    cameraLauncher.launch(uri)
+@Composable
+fun ImageSelector(index: Int, imageUri: Uri?, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(100.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF597DBF))
+            .clickable { onClick() }
+            ,
+        contentAlignment = Alignment.Center
+    ) {
+        if (imageUri != null) {
+            AsyncImage(model = imageUri, contentDescription = null)
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Default.AddAPhoto,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
+                Text("Photo ${index + 1}", color = Color.White, fontSize = 12.sp)
+            }
+        }
+    }
 }
-
-

@@ -22,50 +22,74 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
 import com.app.apnahoarding.R
+import com.app.apnahoarding.core.models.WallData
 import com.app.apnahoarding.ui.components.BottomNavFAB
 import com.app.apnahoarding.ui.components.BottomNavigationBar
+import com.app.apnahoarding.ui.shared.viewmodel.FetchWallUiState
+import com.app.apnahoarding.ui.shared.viewmodel.SelectedWallViewModel
+import com.app.apnahoarding.ui.shared.viewmodel.WallListViewModel
+import com.app.apnahoarding.utils.toFormattedString
+
 
 @Composable
-fun HomeScreen(navController: NavHostController) {
+fun HomeScreen(navController: NavHostController, selectedWallViewModel: SelectedWallViewModel, viewModel: WallListViewModel = hiltViewModel()) {
     var selectedItem by remember { mutableIntStateOf(0) }
+
+    var selectedCity by remember { mutableStateOf("Delhi") }
+
+    val uiStateFeaturedWalls by viewModel.featuredWallsState.collectAsState()
+    val uiStateRecentWalls by viewModel.recentWallState.collectAsState()
+
+
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.loadFeaturedWalls()
+        viewModel.loadRecentWalls(5)
+    }
+
 
     Scaffold(
         bottomBar = {
@@ -88,17 +112,10 @@ fun HomeScreen(navController: NavHostController) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_location), // use your location icon
-                    contentDescription = null,
-                    tint = Color(0xFF007BFF),
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = "Delhi",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 8.dp)
+                CityDropdownSelector(
+                    selectedCity = selectedCity,
+                    cityList = listOf("Delhi", "Mumbai", "Bangalore", "Kolkata", "Chennai"),
+                    onCitySelected = { selectedCity = it }
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Icon(
@@ -158,7 +175,7 @@ fun HomeScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                listOf("Jain Nagar", "Agra", "Suhawali", "Mathura","Gorakhpur").forEach { city ->
+                listOf("Jain Nagar", "Agra", "Suhawali", "Mathura", "Gorakhpur").forEach { city ->
                     Text(
                         text = city,
                         modifier = Modifier
@@ -180,27 +197,64 @@ fun HomeScreen(navController: NavHostController) {
                 Text(
                     "View All",
                     color = Color(0xFF007BFF),
-                    modifier = Modifier.clickable { }
+                    modifier = Modifier.clickable {
+                        navController.navigate("search")
+                    }
                 )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                WallCard(
-                    location = "(10x10) Gali No 6/6, Durga..",
-                    city = "North West-110086",
-                    time = "Today",
-                    imageRes = R.drawable.placeholder_image
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                WallCard(
-                    location = "(45x25) H.No.63 Sim...",
-                    city = "Agra-283105",
-                    time = "9 days ago",
-                    imageRes = R.drawable.wall_photo
-                )
+
+            when (uiStateFeaturedWalls) {
+                is FetchWallUiState.Loading -> {
+
+//                    Toast.makeText(context, "loading", Toast.LENGTH_SHORT).show()
+
+                    Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                        repeat(2) {
+                            WallCardPlaceholder()
+                            Spacer(modifier = Modifier.width(12.dp))
+                        }
+                    }
+                }
+
+                is FetchWallUiState.Success -> {
+                    val walls = (uiStateFeaturedWalls as FetchWallUiState.Success<List<WallData>>).data
+
+//                    Toast.makeText(context, "data loaded", Toast.LENGTH_SHORT).show()
+
+
+//                    Toast.makeText(context,walls.get(0).addressLine, Toast.LENGTH_SHORT).show()
+                    Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                        walls.take(5).forEach { wall ->
+                            WallCard(
+                                location = wall.addressLine,
+                                city = wall.city,
+                                time = wall.createdAt.toFormattedString(),
+                                imageUrl = wall.imageUris[0]!!,
+                                onClick = {
+                                    selectedWallViewModel.setSelectedWall(wall)
+                                    navController.navigate("wallDetails")
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                        }
+                    }
+                }
+
+                is FetchWallUiState.Error -> {
+                    val error = (uiStateFeaturedWalls as FetchWallUiState.Error).message
+                    Text(
+                        text = "Error loading featured walls",
+                        color = Color.Red,
+                        modifier = Modifier.padding(8.dp)
+                    )
+
+//                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                }
             }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -219,28 +273,65 @@ fun HomeScreen(navController: NavHostController) {
                 Text(
                     "View All",
                     color = Color(0xFF007BFF),
-                    modifier = Modifier.clickable { }
+                    modifier = Modifier.clickable {
+                        navController.navigate("search")
+                    }
                 )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                WallCard(
-                    location = "(10x10) Gali No 6/6, Durga..",
-                    city = "North West-110086",
-                    time = "Today",
-                    imageRes = R.drawable.placeholder_image
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                WallCard(
-                    location = "(45x25) H.No.63 Sim...",
-                    city = "Agra-283105",
-                    time = "9 days ago",
-                    imageRes = R.drawable.wall_photo
-                )
-            }
 
+            when (uiStateRecentWalls) {
+                is FetchWallUiState.Loading -> {
+
+//                    Toast.makeText(context, "loading", Toast.LENGTH_SHORT).show()
+
+                    Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                        repeat(2) {
+                            WallCardPlaceholder()
+                            Spacer(modifier = Modifier.width(12.dp))
+                        }
+                    }
+                }
+
+                is FetchWallUiState.Success -> {
+                    val walls = (uiStateRecentWalls as FetchWallUiState.Success<List<WallData>>).data
+
+//                    Toast.makeText(context, "data loaded", Toast.LENGTH_SHORT).show()
+
+
+//                    Toast.makeText(context,walls.get(0).addressLine, Toast.LENGTH_SHORT).show()
+                    Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                        walls.take(5).forEachIndexed { index, wall ->
+                            WallCard(
+                                location = wall.addressLine,
+                                city = wall.city,
+                                time = wall.createdAt.toFormattedString(),
+                                imageUrl = wall.imageUris.getOrNull(0) ?: "", // always using first image safely
+                                onClick = {
+                                    // Navigate or show detail 
+                                    selectedWallViewModel.setSelectedWall(wall)
+                                    navController.navigate("wallDetails")
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                        }
+                    }
+
+                }
+
+                is FetchWallUiState.Error -> {
+                    val error = (uiStateRecentWalls as FetchWallUiState.Error).message
+                    Text(
+                        text = "Error loading featured walls",
+                        color = Color.Red,
+                        modifier = Modifier.padding(8.dp)
+                    )
+
+//                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -257,21 +348,23 @@ fun HomeScreen(navController: NavHostController) {
     }
 }
 
+
 @Composable
-fun WallCard(location: String, city: String, time: String, imageRes: Int) {
+fun WallCard(location: String, city: String, time: String, imageUrl: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .width(200.dp)
             .height(240.dp),
+        onClick = onClick,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column {
-            Image(
-                painter = painterResource(id = imageRes),
+            AsyncImage(
+                model = imageUrl,
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp),
+                    .height(160.dp),
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -281,7 +374,6 @@ fun WallCard(location: String, city: String, time: String, imageRes: Int) {
         }
     }
 }
-
 
 
 @Composable
@@ -406,11 +498,31 @@ fun BenefitsToUseSection() {
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     drawCircle(Color(0xFF4C84FF), radius = size.minDimension / 2)
-                    drawCircle(Color.White, center = Offset(size.width * 0.35f, size.height * 0.3f), radius = 10f)
-                    drawCircle(Color.White, center = Offset(size.width * 0.55f, size.height * 0.3f), radius = 10f)
-                    drawCircle(Color.Black, center = Offset(size.width * 0.35f, size.height * 0.3f), radius = 4f)
-                    drawCircle(Color.Black, center = Offset(size.width * 0.55f, size.height * 0.3f), radius = 4f)
-                    drawCircle(Color(0xFF6134B8), center = Offset(size.width * 0.65f, size.height * 0.75f), radius = 12f)
+                    drawCircle(
+                        Color.White,
+                        center = Offset(size.width * 0.35f, size.height * 0.3f),
+                        radius = 10f
+                    )
+                    drawCircle(
+                        Color.White,
+                        center = Offset(size.width * 0.55f, size.height * 0.3f),
+                        radius = 10f
+                    )
+                    drawCircle(
+                        Color.Black,
+                        center = Offset(size.width * 0.35f, size.height * 0.3f),
+                        radius = 4f
+                    )
+                    drawCircle(
+                        Color.Black,
+                        center = Offset(size.width * 0.55f, size.height * 0.3f),
+                        radius = 4f
+                    )
+                    drawCircle(
+                        Color(0xFF6134B8),
+                        center = Offset(size.width * 0.65f, size.height * 0.75f),
+                        radius = 12f
+                    )
                 }
             }
         }
@@ -435,11 +547,13 @@ fun BenefitTickIcon() {
     }
 }
 
+
 @Composable
 fun MajorBenefitsSection() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
             .background(Color(0xFFE6F6FB)) // light blue background
             .padding(16.dp)
     ) {
@@ -537,11 +651,105 @@ fun MajorBenefitsSection() {
 }
 
 
+@Composable
+fun CityDropdownSelector(
+    selectedCity: String,
+    cityList: List<String>,
+    onCitySelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .clickable { expanded = true }
+            .padding(8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                contentDescription = "Location Icon",
+                tint = Color(0xFF007BFF), // blue
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = selectedCity,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.Default.ArrowDropDown,
+                contentDescription = "Dropdown Icon"
+            )
+        }
+
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            cityList.forEach { city ->
+                DropdownMenuItem(
+                    text = { Text(city) },
+                    onClick = {
+                        onCitySelected(city)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
 
 
 @Composable
-@Preview
-fun PreviewHome() {
-    val navController = rememberNavController()
-    HomeScreen(navController = navController)
+fun WallCardPlaceholder() {
+    Column(
+        modifier = Modifier
+            .width(180.dp)
+            .height(240.dp)
+            .padding(8.dp)
+            .shimmerPlaceholder(true) // or conditional if you want
+    ) {
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .background(Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(16.dp)
+                .background(Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(16.dp)
+                .background(Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+        )
+    }
 }
+
+fun Modifier.shimmerPlaceholder(visible: Boolean = true): Modifier {
+    return if (visible) {
+        this
+            .background(Color.LightGray.copy(alpha = 0.5f), shape = RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(8.dp))
+    } else {
+        this
+    }
+}
+
+
+//@Composable
+//@Preview
+//fun PreviewHome() {
+//    val navController = rememberNavController()
+//    HomeScreen(navController = navController)
+//}

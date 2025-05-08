@@ -1,9 +1,6 @@
 package com.app.apnahoarding.ui.screens.welcome
 
-import android.service.autofill.OnClickAction
-import androidx.compose.runtime.Composable
-import com.app.apnahoarding.R
-import androidx.compose.material3.Button
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -16,18 +13,38 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import com.app.apnahoarding.R
+import com.app.apnahoarding.auth.AuthResponse
+import com.app.apnahoarding.auth.AuthenticationManager
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 @Composable
-fun WelcomeScreen(navController: NavController) {
+fun WelcomeScreen(
+    navHostController: NavHostController,
+    viewModel: WelcomeViewModel = hiltViewModel()
+) {
+
+    val context = LocalContext.current
+    val authenticationManager = AuthenticationManager(context)
+    val coroutineScope = rememberCoroutineScope()
+
+
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -60,7 +77,23 @@ fun WelcomeScreen(navController: NavController) {
                 backgroundColor = Color.White,
                 textColor = Color.Gray,
                 onClick = {
-                    navController.navigate("home")
+                    authenticationManager.signInWithGoogle()
+                        .onEach { response->
+                            if(response is AuthResponse.Success){
+                                val isComplete = viewModel.isUserProfileComplete()
+                                if (isComplete) {
+                                    navHostController.navigate("home") {
+                                        popUpTo("welcome") { inclusive = true }
+                                    }
+                                } else {
+                                    navHostController.navigate("signup") {
+                                        popUpTo("welcome") { inclusive = true }
+                                    }
+                                }
+                            }
+                        }
+                        .launchIn(coroutineScope)
+
                 }
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -71,9 +104,7 @@ fun WelcomeScreen(navController: NavController) {
                 backgroundColor = Color.Blue,
                 textColor = Color.White,
                 onClick = {
-//                    navController.navigate("editProfile")
-//                    navController.navigate("settings")
-                    navController.navigate("profile")
+                    navHostController.navigate("profile")
                 }
             )
 
@@ -87,15 +118,20 @@ fun WelcomeScreen(navController: NavController) {
             )
 
             Spacer(modifier = Modifier.height(24.dp))
-
         }
     }
 }
 
 @Composable
-fun SocialButton(text: String, iconRes: Int, backgroundColor: Color, textColor: Color,onClick: ()->Unit) {
+fun SocialButton(
+    text: String,
+    iconRes: Int,
+    backgroundColor: Color,
+    textColor: Color,
+    onClick: () -> Unit
+) {
     Button(
-        onClick = onClick ,
+        onClick = onClick,
         colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(8.dp),
         modifier = Modifier

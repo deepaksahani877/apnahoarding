@@ -13,8 +13,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,20 +34,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-
+import androidx.navigation.compose.rememberNavController
 import com.app.apnahoarding.R
+import com.app.apnahoarding.ui.screens.signup.data.User
 
 @Composable
-fun SignUpScreen(navController: NavController) {
+fun SignUpScreen(
+    navController: NavController,
+    viewModel: SignUpViewModel = hiltViewModel()
+) {
     var fullName by remember { mutableStateOf("") }
     var mobileNumber by remember { mutableStateOf("") }
     var stateOfResidence by remember { mutableStateOf("") }
@@ -50,14 +56,8 @@ fun SignUpScreen(navController: NavController) {
     val context = LocalContext.current
 
     val userTypeOptions = listOf(
-        "Wall Owner",
-        "Business/Company",
-        "Vehicle Owner",
-        "Advertising Company",
-        "Wall Painter",
-        "Apna Hording Wall Partner",
-        "Others",
-        "Individual"
+        "Individual/Wall Owner",
+        "Advertiser/Company"
     )
 
     Column(
@@ -93,13 +93,25 @@ fun SignUpScreen(navController: NavController) {
                 if (fullName.isBlank() || mobileNumber.isBlank() || stateOfResidence.isBlank()) {
                     Toast.makeText(context, "Please fill all the fields", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(
-                        context,
-                        "Registered as $userType",
-                        Toast.LENGTH_LONG
-                    ).show()
-
-                    // TODO: Save to Firebase / Backend here
+                    val user = User(
+                        fullName = fullName.trim(),
+                        mobileNumber = mobileNumber.trim(),
+                        state = stateOfResidence.trim(),
+                        userType = userType
+                    )
+                    viewModel.registerUser(
+                        user,
+                        onSuccess = {
+                            Toast.makeText(context, "Registration Successful", Toast.LENGTH_SHORT)
+                                .show()
+                            navController.navigate("home") {
+                            }// or go back
+                        },
+                        onError = {
+                            Toast.makeText(context, "Failed: ${it.message}", Toast.LENGTH_LONG)
+                                .show()
+                        }
+                    )
                 }
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C50)),
@@ -185,4 +197,11 @@ fun DropdownField(
             }
         }
     }
+}
+
+
+@Composable
+@Preview
+fun SignUpPreview() {
+    SignUpScreen(rememberNavController())
 }
